@@ -483,7 +483,7 @@ app.post('/api/withdraw', async (req, res) => {
       res.json({ status: 'ok', withdraw: req.body.WithdrawAmount })
     }
     else {
-      res.json({ status: 400, message: 'insufficient Amount! You cannot withdraw from your capital yet. you can only withdraw your profit after the first 20 days of investment, Thanks.' })
+      res.json({ status: 400, message: 'insufficient Amount! You cannot withdraw from your capital yet. you can only withdraw your profit after the first 10 days of investment, Thanks.' })
     }
   }
   catch (error) {
