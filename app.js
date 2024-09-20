@@ -560,7 +560,7 @@ app.patch('/api/p2pdetails', async (req, res) => {
         bankName: req.body.bankName
       }
     })
-  // 66542351827fedb29a501401
+    
   console.log(hey)
   return res.send(hey)
 })
