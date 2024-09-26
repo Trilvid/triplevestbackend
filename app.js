@@ -231,6 +231,18 @@ app.get('/:id/verify/:token', async (req, res) => {
   }
 })
 
+app.get('/', async (req, res) => {
+  
+  try {
+    res.json({
+      status: 'ok',
+      firstname: "all projects are active",
+    })
+  } catch (error) {
+    res.json({ status: 'error', message: error.message })
+  }
+})
+
 app.get('/api/getData', async (req, res) => {
   const token = req.headers['x-access-token']
   try {
