@@ -445,7 +445,7 @@ app.post('/api/withdraw', async (req, res) => {
         }
       )
 
-      res.json({ status: 'ok', withdraw: req.body.WithdrawAmount, name: user.firstname, email: user.email })
+      res.json({ status: 'ok', withdraw: req.body.WithdrawAmount, name: user.firstname, email: user.email, totalprofit: user.totalprofit })
     }
     else if (new Date().getTime() - user.withdrawDuration >= 1728000000 && user.withdrawDuration !== 0 && user.capital < req.body.WithdrawAmount) {
       await User.updateOne(
