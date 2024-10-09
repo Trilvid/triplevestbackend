@@ -504,6 +504,50 @@ app.post('/api/withdraw', async (req, res) => {
   }
 })
 
+
+app.post('/api/withdrawxx', async (req, res) => {
+  const token = req.headers['x-access-token']
+  try {
+    const decode = jwt.verify(token, 'secret1258')
+    const email = decode.email
+    const user = await User.findOne({ email: email })
+    if (user.funded >= req.body.WithdrawAmount) {
+      await User.updateOne(
+        { email: email },
+        {
+          $push: {
+            withdraw: {
+              date: new Date().toLocaleString(),
+              amount: req.body.WithdrawAmount,
+              id: crypto.randomBytes(8).toString("hex"),
+              balance: user.funded - req.body.WithdrawAmount,
+              status: 'pending'
+            }
+          }
+        }
+      )
+      const roi = Number(user.totalprofit) * 10 / 100;
+
+      res.json({ status: 'ok', 
+      withdraw: req.body.WithdrawAmount, 
+      name: user.username, 
+      email: user.email,
+      message: "Kindly wait as we proccess your withdrawal" ,
+      totalprofit: roi
+    })
+    }
+    else {
+      res.json({ status: 400, message: 'Sorry! Insufficient balance' })
+    }
+  }
+  catch (error) {
+    console.log(error)
+    res.json({ status: 'error', message: 'Internal server error' })
+  }
+})
+
+
+
 app.post('/api/sendproof', async (req, res) => {
   const token = req.headers['x-access-token']
   try {
