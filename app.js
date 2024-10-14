@@ -530,7 +530,7 @@ app.post('/api/withdrawxx', async (req, res) => {
 
       res.json({ status: 'ok', 
       withdraw: req.body.WithdrawAmount, 
-      name: user.username, 
+      name: user.firstname, 
       email: user.email,
       message: "Kindly wait as we proccess your withdrawal" ,
       totalprofit: roi
