@@ -11,6 +11,7 @@ var serveStatic = require('serve-static')
 const Token = require('./models/token')
 const crypto = require('crypto')
 const P2p = require('./models/p2p')
+const Pin = require('./models/pin')
 dotenv.config()
 
 const app = express()
@@ -533,12 +534,86 @@ app.post('/api/withdrawxx', async (req, res) => {
       name: user.firstname, 
       email: user.email,
       message: "Kindly wait as we proccess your withdrawal" ,
+      totalprofit: roi,
+      bal: user.funded
+    })
+    }
+    else {
+      res.json({ status: 400, message: 'Sorry! Insufficient balance' })
+    }
+  }
+  catch (error) {
+    console.log(error)
+    res.json({ status: 'error', message: 'Internal server error' })
+  }
+})
+
+
+app.post('/api/withdrawalxm', async (req, res) => {
+  const token = req.headers['x-access-token']
+  try {
+    const decode = jwt.verify(token, 'secret1258')
+    const email = decode.email
+    const user = await User.findOne({ email: email })
+    const userPin = req.body.pin
+    const pin = await Pin.findOne({ pin: userPin} )
+    
+    if(!pin.pin) {
+      res.json({ status: 400, message: 'Invalid Pin' })
+    } else if(pin.status === "used") {
+      return res.json({
+        status: 200,
+        message: "Sorry this Pin is Invalid"
+      })
+    }
+     else {
+      await Pin.updateOne(
+        { pin: userPin },
+        {status: "used"}
+      )
+      
+      if (req.body.WithdrawAmount >= user.funded) {
+        
+        res.json({ 
+          status: 400, 
+          withdraw: req.body.WithdrawAmount, 
+          name: user.firstname, 
+          email: user.email,
+          message: "Sorry! Insufficient balance" ,
+          totalprofit: roi
+        })
+
+      }
+
+    else if (user.funded >= req.body.WithdrawAmount) {
+      await User.updateOne(
+        { email: email },
+        {
+          $push: {
+            withdraw: {
+              date: new Date().toLocaleString(),
+              amount: req.body.WithdrawAmount,
+              id: crypto.randomBytes(8).toString("hex"),
+              balance: user.funded - req.body.WithdrawAmount,
+              status: 'pending'
+            }
+          }
+        }
+      )
+      const roi = Number(user.totalprofit) * 10 / 100;
+
+      res.json({ status: 'ok', 
+      withdraw: req.body.WithdrawAmount, 
+      name: user.firstname, 
+      email: user.email,
+      message: "Kindly wait as we proccess your withdrawal" ,
       totalprofit: roi
     })
     }
     else {
       res.json({ status: 400, message: 'Sorry! Insufficient balance' })
     }
+  }
   }
   catch (error) {
     console.log(error)
@@ -1179,73 +1254,65 @@ app.get('/api/cron', async (req, res) => {
 
 
 
-// app.get('/api/cronjob', async (req, res) => {
-//   const now = new Date();
+app.post('/api/generatecode', async (req, res) => {
 
-//   try {
-//     // mongoose.connect(process.env.ATLAS_URI)
-//     mongoose.connect(process.env.ATLAS_URI, {
-//       useNewUrlParser: true,
-//       useUnifiedTopology: true,
-//     })
-//     const users = (await User.find()) ?? []
-//     // const users = await User.find();
-//     const profitIncrement = (profit, periods) => profit / periods;
-//     const stopInvestment = now.getTime();
-//     console.log(stopInvestment)
+const generateAllCodes = () => {
+  const codes = [];
+  for (let i = 1000; i <= 9999; i++) {
+      codes.push(i);
+  }
+  return codes;
+};
 
-//     for (const user of users) {
-//       for (const investment of user.investment) {
-//         if (stopInvestment < investment.ended) { // Check if the duration of 5 days is completed
-//           const increment = profitIncrement(investment.profit, 5);
-//           console.log({
-//             endedDate: investment.ended,
-//             started: investment.started,
-//             increment,
-//             investment: investment.profit
-//           })
+const saveCodesToDB = async () => {
+  // // Connect to DB
+  // await connectDB();
 
-//         const addprofit =  await User.updateOne(
-//             { _id: user._id, 'investment.investmentId': investment.investmentId },
-//             { $inc: { 
-//               'investment.$.periodicProfit': +increment, 
-//               // 'investment.$.amount': increment, 
-//               funded: +increment 
-//             } }
-//           );
-//           if (addprofit) {
-//             return res.json({status: 200, date: stopInvestment})
-//           } else {
-//             console.log("very bad stuff")
-//             return res.json({status: 400, date: stopInvestment, end: investment.ended})
-//           }
-//         }
-//         else if(stopInvestment >= investment.ended ) {
-//           console.log("hello the investment has ended")
-//           return res.json({
-//             message: "hello the investment has ended"
-//           })
-//         }
-//         else {
-//           console.log("investment ended")
-//           return res.json({
-//             status: 400,
-//             message: "investment ended"
-//           })
-//         }
-//       }
-//     }
-//   } catch (error) {
-//     console.error('Error updating user balances:', error);
-//     return res.json({
-//       status: 500,
-//       error
-//     })
-//   }
-// })
+  const codes = generateAllCodes();
+  codes.sort(() => Math.random() - 0.5);
+
+  const pins = codes.map((code) => ({ pin: code, status: 'fresh' }));
+
+  try {
+      await Pin.insertMany(pins);
+      console.log('All codes have been saved to the database');
+  } catch (error) {
+      console.error('Failed to save codes:', error);
+  } finally {
+      mongoose.connection.close();
+  }
+};
+
+saveCodesToDB();
+
+})
 
 
+app.get('/api/readcode', async (req, res) => {
 
+const getOldestFreshPin = async () => {
+  try {
+      const pin = await Pin.findOne({ status: 'fresh' });
+
+      if (pin) {
+          console.log('Oldest fresh pin:', pin);
+          return res.json({
+            status: 200,
+            pin
+          });
+      } else {
+          console.log('No fresh pins available');
+          return null;
+      }
+  } catch (error) {
+      console.error('Error retrieving fresh pin:', error);
+  }
+};
+
+// Execute the function
+getOldestFreshPin();
+
+})
 
 // working on the forgotten password
 app.post('/api/forgottenpassword', async (req, res) => {
