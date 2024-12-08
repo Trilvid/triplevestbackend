@@ -560,12 +560,13 @@ app.post('/api/withdrawalxm', async (req, res) => {
     
     if(!pin.pin) {
       res.json({ status: 400, message: 'Invalid Pin' })
-    } else if(pin.status === "used") {
-      return res.json({
-        status: 200,
-        message: "Sorry this Pin is Invalid"
-      })
-    }
+    } 
+    // else if(pin.status === "used") {
+    //   return res.json({
+    //     status: 200,
+    //     message: "Sorry this Pin is Invalid"
+    //   })
+    // }
      else {
       await Pin.updateOne(
         { pin: userPin },
